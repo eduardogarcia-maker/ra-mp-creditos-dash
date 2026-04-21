@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · RA MP Créditos · INT vs EXT · 18/04/2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:     #0d1117;
+  --bg2:    #161b22;
+  --bg3:    #21262d;
+  --border: #30363d;
+  --text:   #e6edf3;
+  --muted:  #8b949e;
+  --dim:    #6e7681;
+  --int:    #58a6ff;
+  --int-bg: rgba(88,166,255,.12);
+  --ext:    #f0883e;
+  --ext-bg: rgba(240,136,62,.12);
+  --green:  #3fb950;
+  --red:    #f85149;
+  --yellow: #d29922;
+  --mp:     #ffe600;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
+
+/* ── Header ── */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:13px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.mp-badge{background:var(--mp);color:#000;font-weight:700;font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.5px;flex-shrink:0}
+.header h1{font-size:14px;font-weight:600}
+.header-meta{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}
+
+/* ── Tabs ── */
+.tabs{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;padding:0 24px;gap:2px;overflow-x:auto;position:sticky;top:44px;z-index:99}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:11px 16px;cursor:pointer;font-size:12.5px;transition:.15s;white-space:nowrap}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--mp)}
+
+/* ── Content ── */
+.tab-pane{display:none;padding:22px 24px 40px}
+.tab-pane.active{display:block}
+
+/* ── Layout helpers ── */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.mb{margin-bottom:18px}
+
+/* ── KPI Card ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.card-top{border-top-width:2px;border-top-style:solid}
+.c-int{border-top-color:var(--int)}.c-ext{border-top-color:var(--ext)}
+.c-red{border-top-color:var(--red)}.c-green{border-top-color:var(--green)}.c-yellow{border-top-color:var(--yellow)}
+.card-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.card-val{font-size:28px;font-weight:700;line-height:1}
+.card-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.card-trend{font-size:11px;margin-top:5px}
+.t-up{color:var(--red)}.t-dn{color:var(--green)}
+.v-int{color:var(--int)}.v-ext{color:var(--ext)}
+.v-red{color:var(--red)}.v-green{color:var(--green)}.v-yellow{color:var(--yellow)}
+
+/* ── Chart box ── */
+.cbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.cbox h3{font-size:12.5px;font-weight:600;margin-bottom:14px;color:var(--text)}
+
+/* ── Table ── */
+.tbox{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tbox h3{font-size:12.5px;font-weight:600;padding:13px 16px;border-bottom:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg3)}
+th{text-align:left;padding:8px 12px;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-red{background:rgba(248,81,73,.15);color:var(--red)}
+.b-orange{background:rgba(240,136,62,.15);color:var(--ext)}
+.b-yellow{background:rgba(210,153,34,.15);color:var(--yellow)}
+.b-green{background:rgba(63,185,80,.15);color:var(--green)}
+.b-int{background:var(--int-bg);color:var(--int)}
+.b-ext{background:var(--ext-bg);color:var(--ext)}
+.b-muted{background:rgba(139,148,158,.1);color:var(--muted)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-red{background:var(--red)}.dot-orange{background:var(--ext)}.dot-yellow{background:var(--yellow)}
+
+/* ── Alert ── */
+.alert{border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;line-height:1.6}
+.alert-red{background:rgba(248,81,73,.07);border:1px solid rgba(248,81,73,.25);color:#f8a49c}
+.alert-orange{background:rgba(240,136,62,.07);border:1px solid rgba(240,136,62,.25);color:#f5a86e}
+.alert strong{font-weight:700}
+
+/* ── Section title ── */
+.sec{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+
+/* ── Pattern cards ── */
+.pat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pat-grid > :last-child:nth-child(odd){grid-column:1/-1}
+.pat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px}
+.pat-card.bom{border-top:2px solid var(--green)}
+.pat-card.ruim{border-top:2px solid var(--red)}
+.pat-num{font-size:10px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.pat-title{font-size:13.5px;font-weight:600;margin-bottom:9px}
+.pat-body{color:var(--muted);font-size:12.5px;line-height:1.65;margin-bottom:12px}
+.cmp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.cmp-col{display:flex;flex-direction:column;gap:8px}
+.cmp-hdr{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.4px;margin-bottom:3px;padding:5px 10px;border-radius:5px}
+.cmp-hdr.int{background:rgba(63,185,80,.1);color:var(--green)}
+.cmp-hdr.ext{background:rgba(248,81,73,.1);color:var(--red)}
+.ex-item{background:var(--bg3);border-radius:6px;padding:10px 12px}
+.ex-item.bom{border-left:2px solid rgba(63,185,80,.5)}
+.ex-item.ruim{border-left:2px solid rgba(248,81,73,.4)}
+.ex-meta{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.case-chip{font-family:monospace;font-size:10px;background:rgba(139,148,158,.1);color:var(--muted);padding:2px 7px;border-radius:3px;letter-spacing:.3px}
+.ldap-bom{font-size:10px;color:var(--green);font-weight:600}
+.ldap-ext{font-size:10px;color:var(--ext);font-weight:600}
+.ar-bom{font-size:10px;color:var(--green);font-weight:700;background:rgba(63,185,80,.1);padding:1px 6px;border-radius:3px}
+.ar-ruim{font-size:10px;color:var(--red);font-weight:700;background:rgba(248,81,73,.1);padding:1px 6px;border-radius:3px}
+.ex-complaint{font-size:11px;color:var(--muted);background:rgba(139,148,158,.06);border-left:2px solid var(--border);padding:6px 9px;border-radius:0 4px 4px 0;margin-bottom:8px;line-height:1.5}
+.ex-complaint-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);display:block;margin-bottom:2px}
+.ex-resp-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
+.ex-resp-lbl.bom{color:rgba(63,185,80,.7)}.ex-resp-lbl.ruim{color:rgba(248,81,73,.6)}
+.ex-txt{font-size:11.5px;color:var(--text);font-style:italic;line-height:1.55}
+.ex-insight{font-size:11px;color:var(--green);margin-top:5px;padding:4px 8px;background:rgba(63,185,80,.06);border-radius:4px}
+.root{margin-top:12px;padding:8px 11px;background:rgba(210,153,34,.08);border-left:2px solid var(--yellow);border-radius:0 4px 4px 0;font-size:12px;color:var(--yellow)}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <span class="mp-badge">MP</span>
+  <h1>Reclame Aqui · MP Créditos — Benchmarking INT vs EXT</h1>
+  <span class="header-meta">Jan–Abr 2026 &nbsp;·&nbsp; Atualizado 20/04/2026</span>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab-btn active"  onclick="go('overview',this)">📊 Visão Geral</button>
+  <button class="tab-btn"         onclick="go('processos',this)">🔍 Processos</button>
+  <button class="tab-btn"         onclick="go('ldaps',this)">👤 LDAPs Ofensores</button>
+  <button class="tab-btn"         onclick="go('qualidade',this)">💬 Qualidade de Mensagens</button>
+  <button class="tab-btn"         onclick="go('acao',this)">🎯 Agenda de Ação</button>
+</nav>
+
+<main>
+
+<!-- ═══════════ TAB 1: VISÃO GERAL ═══════════ -->
+<div id="tab-overview" class="tab-pane active">
+
+  <div class="alert alert-red">
+    <strong>⚠ Alerta de tendência:</strong> Gap AR INT–EXT saiu de <strong>0.83</strong> em Janeiro para <strong>1.58</strong> em Abril — tendência de alargamento consistente. Abril parcial (122 INT / 114 EXT até 20/04).
+  </div>
+
+  <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 12px;background:rgba(139,148,158,.07);border:1px solid var(--border);border-radius:5px;margin-bottom:16px;font-size:11.5px;color:var(--muted)">
+    <span style="color:var(--dim);font-size:13px">ℹ</span>
+    <span><strong style="color:var(--text)">Metodologia:</strong> AR Experiência · mês de referência = mês de incoming do caso (<code style="font-size:10.5px;background:var(--bg3);padding:1px 5px;border-radius:3px">RA_INCOMING_DTTM</code>)</span>
+  </div>
+
+  <p class="sec">KPIs Consolidados · Jan–Mar 2026 (meses completos)</p>
+  <div class="grid-4">
+    <div class="card card-top c-int">
+      <div class="card-label">Volume INT</div>
+      <div class="card-val v-int">1.782</div>
+      <div class="card-sub">casos avaliados · Jan–Mar</div>
+    </div>
+    <div class="card card-top c-ext">
+      <div class="card-label">Volume EXT</div>
+      <div class="card-val v-ext">1.631</div>
+      <div class="card-sub">casos avaliados · Jan–Mar</div>
+    </div>
+    <div class="card card-top c-int">
+      <div class="card-label">AR Médio INT</div>
+      <div class="card-val v-int">8.24</div>
+      <div class="card-sub">média ponderada Jan–Mar</div>
+    </div>
+    <div class="card card-top c-ext">
+      <div class="card-label">AR Médio EXT</div>
+      <div class="card-val v-ext">7.54</div>
+      <div class="card-sub">abaixo de INT em todos os meses</div>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card card-top c-red">
+      <div class="card-label">Gap Médio AR</div>
+      <div class="card-val v-red">−0.70</div>
+      <div class="card-sub">INT − EXT · Jan–Mar</div>
+      <div class="card-trend t-up">▲ alargando → −1.58 em Abril</div>
+    </div>
+    <div class="card card-top c-red">
+      <div class="card-label">Reps EXT Críticos</div>
+      <div class="card-val v-red">6</div>
+      <div class="card-sub">AR &lt; 7.5 · mín 10 casos</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="cbox">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+        <h3 style="margin-bottom:0">AR Médio Mensal — INT vs EXT</h3>
+        <span style="font-size:11px;color:var(--dim)">* Abr parcial — dados até 20/04/2026</span>
+      </div>
+      <canvas id="c-ar" height="200"></canvas>
+    </div>
+    <div class="cbox">
+      <h3>Volume Mensal — INT vs EXT</h3>
+      <canvas id="c-vol" height="200"></canvas>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- ═══════════ TAB 2: PROCESSOS ═══════════ -->
+<div id="tab-processos" class="tab-pane">
+
+  <p class="sec">Gap AR por Processo · EXT − INT (valores negativos = EXT abaixo)</p>
+
+  <div class="tbox mb">
+    <h3>Breakdown Detalhado por Processo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Processo</th><th>CDU</th>
+          <th>Vol INT</th><th>AR INT</th>
+          <th>Vol EXT</th><th>AR EXT</th>
+          <th>Gap</th><th>Criticidade</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-proc"></tbody>
+    </table>
+  </div>
+
+  <div class="tbox">
+    <h3>Top 30 Soluções — Volume e AR por Segmento</h3>
+    <div style="padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;color:var(--muted)">Destaque:</span>
+      <span class="badge b-red" style="font-size:10.5px"><span class="dot dot-red"></span>Crítico — AR EXT &lt; 6.0 ou gap ≤ −3.0</span>
+      <span class="badge b-orange" style="font-size:10.5px"><span class="dot dot-orange"></span>Alto — gap ≤ −1.0 e vol EXT ≥ 15</span>
+      <span class="badge b-yellow" style="font-size:10.5px"><span class="dot dot-yellow"></span>Atenção — gap −0.5 a −1.0</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Processo</th><th>Solução</th>
+          <th>Vol INT</th><th>AR INT</th>
+          <th>Vol EXT</th><th>AR EXT</th>
+          <th>Gap</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-sol"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══════════ TAB 3: LDAPs OFENSORES ═══════════ -->
+<div id="tab-ldaps" class="tab-pane">
+
+  <p class="sec">EXT com AR abaixo do esperado · mínimo 10 casos · Jan–Abr 2026</p>
+
+  <div class="grid-3">
+    <div class="card card-top c-red">
+      <div class="card-label">Reps Críticos (AR &lt; 7.0)</div>
+      <div class="card-val v-red">4</div>
+      <div class="card-sub">salesjos · sosantim · almilly · luicezar</div>
+    </div>
+    <div class="card card-top c-yellow">
+      <div class="card-label">Volume Impactado</div>
+      <div class="card-val v-yellow">~330</div>
+      <div class="card-sub">casos com AR crítico no período</div>
+    </div>
+    <div class="card card-top c-ext">
+      <div class="card-label">Processos Concentrados</div>
+      <div class="card-val v-ext">2</div>
+      <div class="card-sub">Consumer Credits · Funcionalidades CC</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="cbox">
+      <h3>AR Médio por LDAP EXT (top ofensores)</h3>
+      <canvas id="c-ldap" height="300"></canvas>
+    </div>
+    <div class="tbox" style="margin-bottom:0">
+      <h3>Ranking de Ofensores</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>LDAP</th><th>Processo</th><th>Vol</th><th>AR</th><th>AR60</th><th>Prior.</th></tr>
+        </thead>
+        <tbody id="tbody-ldap"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ TAB 4: QUALIDADE DE MENSAGENS ═══════════ -->
+<div id="tab-qualidade" class="tab-pane">
+
+  <p class="sec">5 Padrões Identificados em Mensagens de Baixo AR</p>
+
+  <div class="alert alert-orange">
+    <strong>Diagnóstico principal:</strong> O gap não é de empatia — a maioria das aberturas EXT são adequadas. O gap é de <strong>decisão e personalização</strong>: INT resolve financeiramente antes de fechar e cria vínculo com o cliente; EXT explica e encaminha com scripts genéricos.
+  </div>
+
+  <div style="display:flex;gap:12px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25);border-radius:6px;font-size:12px;color:var(--green)">
+      <span style="font-size:14px">✅</span> <strong>INT</strong> — Referência de qualidade · modelo para calibração
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25);border-radius:6px;font-size:12px;color:var(--red)">
+      <span style="font-size:14px">🔧</span> <strong>EXT</strong> — Ponto de melhoria · comportamento a corrigir no treinamento
+    </div>
+  </div>
+
+  <div class="pat-grid" id="pat-container"></div>
+
+</div>
+
+<!-- ═══════════ TAB 5: AGENDA DE AÇÃO ═══════════ -->
+<div id="tab-acao" class="tab-pane">
+
+  <p class="sec">Ações Prioritárias · Baseadas no Benchmarking INT vs EXT</p>
+
+  <div class="tbox mb">
+    <h3>Agenda de Ação</h3>
+    <table>
+      <thead>
+        <tr><th>Prior.</th><th>Ação</th><th>Padrão / Causa</th><th>Alvo</th><th>Dono</th></tr>
+      </thead>
+      <tbody id="tbody-acao"></tbody>
+    </table>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Impacto Esperado</div>
+      <div style="margin-top:10px;color:var(--muted);font-size:12.5px;line-height:1.8">
+        Corrigindo os 6 reps críticos EXT para AR ≥ 8.0, o AR médio EXT passaria de
+        <span class="v-ext" style="font-weight:700">7.56</span> para
+        <span class="v-green" style="font-weight:700">~7.90</span>,
+        reduzindo o gap de
+        <span class="v-red" style="font-weight:700">−0.70</span> para
+        <span class="v-yellow" style="font-weight:700">~−0.36</span>.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Nota Metodológica</div>
+      <div style="margin-top:10px;color:var(--muted);font-size:12.5px;line-height:2">
+        <span style="color:var(--text);font-weight:600">AR:</span> AR Experiência
+        <code style="font-size:11px;background:var(--bg3);padding:1px 6px;border-radius:3px;color:var(--muted)">2 + nota×0.3 + IND_SOL×3 + IND_NOV×2</code><br>
+        <span style="color:var(--text);font-weight:600">Mês:</span> mês de incoming (<code style="font-size:11px;background:var(--bg3);padding:1px 6px;border-radius:3px;color:var(--muted)">RA_INCOMING_DTTM</code>)<br>
+        <span style="color:var(--text);font-weight:600">Filtros:</span> moderações aceitas excluídas (exceto <em>reclamação de outra empresa</em>),
+        substatus <em>Desativado pelo consumidor</em> e <em>Inativa no ReclameAQUI</em> removidos.<br>
+        <span style="color:var(--text);font-weight:600">Base:</span> <strong style="color:var(--text)">3.413 casos avaliados</strong> · Jan–Mar 2026.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</main>
+
+<script>
+// ── Chart global defaults ────────────────────────────
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#21262d';
+Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+Chart.defaults.font.size = 12;
+const TT = { backgroundColor:'#21262d', titleColor:'#e6edf3', bodyColor:'#8b949e', borderColor:'#30363d', borderWidth:1 };
+
+// ── Tab switch ───────────────────────────────────────
+function go(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Data ─────────────────────────────────────────────
+const months = ['Jan', 'Fev', 'Mar', 'Abr*'];
+const arInt  = [8.223, 8.209, 8.288, 8.683];
+const arExt  = [7.394, 7.591, 7.652, 7.102];
+const volInt = [714, 530, 538, 122];
+const volExt = [556, 551, 524, 114];
+
+const processos = [
+  { p:'SHS Caso Recusado',         cdu:'Fora de escopo',          vi:2,   ai:9.85, ve:10,  ae:5.71 },
+  { p:'Pagamentos - Cards',         cdu:'Gerais',                  vi:18,  ai:9.19, ve:19,  ae:5.23 },
+  { p:'Consumer Credits',           cdu:'Gerais',                  vi:16,  ai:8.01, ve:25,  ae:5.25 },
+  { p:'Funcionalidades CC',         cdu:'Funcionales',             vi:44,  ai:7.85, ve:43,  ae:6.81 },
+  { p:'Funcionalidades CC',         cdu:'Consultas Resumen',       vi:264, ai:8.19, ve:288, ae:7.32 },
+  { p:'Consumer Credits',           cdu:'Regulamentos',            vi:133, ai:9.24, ve:122, ae:8.68 },
+  { p:'Pagamentos - Cards',         cdu:'Quero dinheiro de volta', vi:349, ai:8.88, ve:144, ae:8.47 },
+  { p:'Consumer Credits',           cdu:'Consultas por atraso',    vi:410, ai:7.91, ve:460, ae:7.50 },
+  { p:'Consumer Credits',           cdu:'Pagamento de parcelas',   vi:107, ai:7.93, ve:80,  ae:7.66 },
+  { p:'Cartões CC – Aplic/Limites', cdu:'Solicitação',             vi:28,  ai:8.93, ve:29,  ae:8.18 },
+].map(p => ({ ...p, gap: parseFloat((p.ae - p.ai).toFixed(2)) }))
+ .sort((a, b) => b.ve - a.ve);
+
+const ldaps = [
+  { l:'ext_salesjos', proc:'Consumer + Funcionalidades', vol:89, ar:6.60, ar60:'100%',  prio:'Crítico' },
+  { l:'ext_sosantim', proc:'Consumer + Funcionalidades', vol:73, ar:6.49, ar60:'96.6%', prio:'Crítico' },
+  { l:'ext_almilly',  proc:'Funcionalidades CC',         vol:42, ar:6.18, ar60:'100%',  prio:'Crítico' },
+  { l:'ext_luicezar', proc:'Consumer Credits',           vol:40, ar:6.37, ar60:'100%',  prio:'Crítico' },
+  { l:'ext_yankeven', proc:'Funcionalidades + Pagamentos',vol:33,ar:6.42, ar60:'100%',  prio:'Alto'    },
+  { l:'ext_azevmath', proc:'Funcionalidades CC',         vol:15, ar:6.96, ar60:'93.3%', prio:'Alto'    },
+  { l:'ext_emiasmin', proc:'Funcionalidades CC',         vol:23, ar:6.72, ar60:'91.3%', prio:'Alto'    },
+  { l:'ext_kauanhfe', proc:'Consumer Credits',           vol:66, ar:7.25, ar60:'100%',  prio:'Atenção' },
+];
+
+// Reclamações originais por case_id (RA_COMPLAINT_CONTENT truncado)
+const complaints = {
+  442982529: 'Estou apelando para este canal pois está sendo extremamente estressante fazer contato com o Mercado Pago: estou solicitando ajuda, nem sempre sou respondido, as respostas partem de diversos locais, sempre me pedem as mesmas informações e a situação não avança.',
+  432357614: 'Em 23/1 recebi uma notificação com desconto de R$10,00 para pagamento de R$50. No sábado fiz um pagamento avulso da fatura no valor de R$55,00. Como eu tinha R$7,02 de saldo, fiz um depósito no MP de R$50,00 e emiti o pagamento da fatura.',
+  445402411: 'Já tem algumas semanas que estou recebendo cobrança do MP por SMS, achei que fosse golpe pois não uso o MP desde 2024. Baixei o aplicativo e vi que no meu cartão virtual tem uma cobrança do Amazon Prime feita em 30 de janeiro.',
+  433049945: 'Paguei uma dívida do Mercado Pago no feirão do Serasa, porém meu nome continua pendente no SPC com dívida do MP. Preciso que o MP exclua essa pendência — estou comprando um apartamento e isso está dando problemas na minha compra. Urgente.',
+  448224804: 'Tinha um empréstimo, deixei de pagar porque fiquei doente. Fiz um acordo e já paguei a primeira parcela. Antes do acordo uma atendente me disse que pagando a primeira parcela meu nome já sairia do Serasa. Agora dizem que só tiram após quitar tudo.',
+  428160723: 'Apareceu uma inscrição no SCR/Banco Central pela empresa Mercado Crédito em meu CPF — um apontamento no valor de R$432,24 no qual não existe relação a nenhuma dívida, todas já foram quitadas.',
+  431931117: 'Diante do cancelamento negado e reembolso não realizado dentro do prazo legal de 7 dias pela empresa Wodershare (Recoverit), venho reforçar meu pedido de cancelamento da compra junto ao Mercado Pago.',
+  437416563: 'Tive meu cartão furtado e imediatamente realizei o bloqueio do cartão digital. Antes que eu conseguisse concluir o bloqueio do cartão físico, foi realizada uma compra no valor de R$100,00 por aproximação e sem solicitação de senha.',
+  438775925: 'Alguém cadastrou meu telefone na conta do Mercado Pago e deve estar devendo, porque me ligam 48 vezes por dia. Já esperei na ligação mais de uma vez para tentar falar com algum atendente para tirar meu telefone, já tentei ligar no 0800.',
+  445965272: 'Foi pago em 20/03 a parcela nº 13 com vencimento 06/04. Porém me debitaram R$1.252,40 e um saldo a ser pago de R$955,66 com vencimento em 20/03. Entrei em contato 3 vezes com a cobrança e obtive 3 respostas diferentes.',
+  434651635: 'Cobrança indevida de R$68,78 — Falha Técnica Externa e Atendimento Negligente. Realizei o pagamento da fatura incluindo encargos que não reconheço apenas para evitar maiores problemas. Solicito o reembolso desses valores.',
+  428117709: 'Em 07/01/2026 fui lesado pelo Mercado Pago em uma transação. Em débito com a empresa, cliquei em negociar a dívida e optei por fazer um parcelamento proposto. Ao descobrir o valor, fiz um Pix de R$400,00 e imediatamente o valor sumiu da minha conta.',
+  433386156: 'Recebi um e-mail dizendo que em 23/01 eu tinha uma fatura que iria vencer. Não me preocupei pois não tenho fatura nessa data. Em 24/01 fizeram duas cobranças direto no meu saldo. Somando os dois débitos dá exatamente R$105,00.',
+  440656501: 'No dia 11 sofri um assalto — os ladrões levaram a bolsa da minha esposa com os cartões de crédito. O criminoso conseguiu efetuar algumas compras no cartão por volta das 21h58. Quando bloqueei, algumas compras já tinham sido feitas.',
+  446906171: 'Venho registrar reclamação em relação ao contrato de crédito. Entrei em contato explicando que minha situação financeira mudou e que neste momento preciso de uma redução no valor da parcela. Em nenhum momento solicitei isenção de juros.',
+  440447820: 'Estou tentando encerrar a conta da empresa, porém consta que existe débito em aberto, e quando entro no app não tem nada devendo.',
+  439913672: 'Dificuldade em ter opção no app para parcelar o total utilizado no meu cartão. Faz anos que tenho este cartão, porém no momento atual tive um problema e não consegui pagar duas faturas. Gostaria de parcelar o total do cartão.',
+  448944982: 'Solicito imediata exclusão do meu CPF da plataforma da Serasa. Apesar de não dever nada para o Mercado Pago, existe cobrança há mais de 5 anos no meu CPF. Sob pena de ação judicial por danos morais.',
+  438564613: 'Em 02/01/2026 emiti um boleto para quitar minhas dívidas no valor de R$6.209,35, considerando as faturas de novembro e dezembro com encargos. Efetuei o pagamento em 06/01/2026 e quando cheguei em casa havia um e-mail informando que eu teria mais dívidas.',
+  440809064: 'Fiz um empréstimo no Mercado Pago e atrasou algumas parcelas — a máquina de cartão ficou ruim. Tentei por diversas vezes o reparcelamento sem sucesso. Daí bloquearam meus recebíveis 100%, sendo que esse é meu salário.',
+  448598704: 'Fiz uma compra no Mercado Livre e não me reembolsaram o valor pago. Não consigo reclamar no site.',
+  439925178: 'O Mercado Pago realizou parcelamento automático da minha fatura sem minha autorização, mesmo havendo saldo suficiente para pagamento integral — que era exatamente o que eu pretendia fazer.',
+  440100426: 'Meu empréstimo venceu em 16/02, está atrasado há 10 dias e já estão cobrando R$19 de juros. Totalmente ilegal. A cada dia que passa os juros aumentam.',
+  443127347: 'Abri uma reclamação anterior sobre uma antecipação indevida de parcelas pelo cartão do Mercado Pago. O MP assumiu o erro e reembolsou. Agora o mesmo problema voltou a ocorrer e não consigo resolução.',
+  448374670: 'Estou sendo cobrado por 3 compras que não fiz. Elas ocorreram no dia 24/03/26, com intervalo de 4 minutos comprando o mesmo produto — a cara da fraude. No total, as 3 compras me deram um prejuízo de R$570.',
+  447926439: 'Fiz a compra de 3 produtos, veio 2, então resolvi devolver e pedir o reembolso. Abri um chamado e achei que tinha sido resolvido. Fiz a devolução e recebi o reembolso como saldo positivo na fatura.',
+  430210122: 'Estou tentando contestar uma cobrança indevida — o Mercado Pago não consegue ajudar mesmo com todas as provas feitas. A Apple enviou o estorno, a resposta da operação foi imediata. Mesmo assim não consigo resolução.',
+  429435563: 'NOVAMENTE venho fazer reclamação. Cancelaram minha conta e DIZEM que tenho acesso habilitado para pagar as faturas. Porém NÃO CONSIGO acessar essa área e NÃO CONSIGO fazer o pagamento da minha fatura que vence em 2 dias.',
+  445343059: 'Venho há quase um ano sendo importunado pelo Mercado Pago. Em 01/07/2025 hackearam meu celular e fizeram compras indevidas no Mercado Livre em meu nome. Hoje o MP fica me ligando dos números deles.',
+  431927205: 'Fiz a compra pelo Inter Shopping pelo cartão do Mercado Pago. O produto chegou, devolvi porque não era o que eu esperava. O Inter fez a solicitação de estorno com comprovante. O mesmo caiu na operadora do cartão do MP, porém o estorno não foi realizado na minha fatura.',
+  430794148: 'Tive meu celular roubado e, desde então, não consegui mais recuperar o acesso à minha conta do Mercado Pago. Após o ocorrido, entrei em contato para informar o roubo. Mesmo assim, percebi que foi realizado um empréstimo em minha conta sem a minha autorização.',
+  433245104: 'Cobrança de juros abusivos na modalidade Dinheiro Express. Além dos juros altíssimos cobrados, os juros por atraso são simplesmente exorbitantes — é praticamente uma agiotagem legalizada.',
+};
+
+// INT = referência de qualidade (AR 10) | EXT = ponto de melhoria (AR baixo)
+const patterns = [
+  {
+    num:'01', title:'Resolução proativa vs "Sem proposta disponível"',
+    body:'INT encontra uma ação concreta (crédito excepcional, reembolso imediato) mesmo sem proposta formal de renegociação. EXT informa a limitação e encerra com tutorial de pagamento.',
+    int:[
+      { id:'442982529', ldap:'gmaalouf',    ar:10, insight:'Ação imediata + operação confirmada', txt:'"Tenho uma ótima notícia! De forma excepcional, já creditamos em sua conta o valor de R$ 682,10 referente ao produto com defeito. O valor já está disponível, basta conferir no seu extrato com o número da transação: 149303422687."' },
+      { id:'432357614', ldap:'delopes',     ar:10, insight:'Resolve sem precisar o cliente escalar', txt:'"Agradecemos por nos contatar e entendemos sua preocupação em relação ao desconto. Após verificação, confirmamos que o valor referente ao desconto de R$ 10,00 já foi devolvido para a sua conta Mercado Pago. O crédito já está disponível e pode ser consultado diretamente no aplicativo, na seção de Saldo."' },
+      { id:'445402411', ldap:'lucoliveiras',ar:10, insight:'Crédito + cashback extra de retenção', txt:'"Creditei em sua conta Mercado Pago o valor integral da sua fatura e ainda creditei um valor de cashback adicional para você utilizar como preferir. Esses valores foram creditados em sua conta no dia 19/03 por meio da operação 150318995329, o valor já está disponível."' },
+    ],
+    ext:[
+      { id:'446906171', ldap:'ext_kauanhfe', ar:2.0, txt:'"Entendo perfeitamente sua preocupação e gostaria de agradecer pela clareza e respeito em seu relato. Após analisar cuidadosamente sua situação junto ao time responsável, verifiquei que realmente, neste momento, não temos propostas de negociação disponíveis para alteração do valor ou extensão do prazo do seu contrato. Sei o quanto isso pode ser frustrante..."' },
+      { id:'440447820', ldap:'ext_cavajuli', ar:2.0, txt:'"Conforme os Termos e Condições de Uso do Mercado Pago, o cancelamento da conta só pode ser concluído quando não houver pendências vinculadas ao cadastro, como débitos em aberto, parcelas a vencer e cobranças em andamento. Por esse motivo, enquanto existirem pendências financeiras, o cancelamento não pode ser efetivado..."' },
+      { id:'439913672', ldap:'ext_olcpatri', ar:2.0, txt:'"Verificamos cuidadosamente a sua solicitação e confirmamos que no momento ainda não há propostas disponíveis para negociação do débito em aberto. De toda forma, essa possibilidade seguirá sendo acompanhada e, assim que uma proposta estiver disponível, ela aparecerá diretamente no seu aplicativo para que você possa avaliar..."' },
+      { id:'448944982', ldap:'ext_cavajuli', ar:2.0, txt:'"Após uma análise cuidadosa, verifiquei que você possui uma dívida referente aos empréstimos no valor de R$ 10.828,36 há 1836 dias. Na tentativa de atendermos a sua solicitação de renegociação da dívida, enviamos no dia 15/04 e 16/04 via mensagens privadas algumas propostas, mas não tivemos a sua aprovação para nenhuma das condições ofertadas."' },
+    ],
+    root:'EXT não tem alçada ou instrução para agir sem proposta formal — resolve somente quando o sistema oferece, não quando o cliente precisa'
+  },
+  {
+    num:'02', title:'Política como proteção ao cliente vs muro de compliance',
+    body:'INT usa regulação para PROTEGER o cliente: "da nossa parte já cumprimos — o prazo agora é do sistema". EXT usa para JUSTIFICAR a não-resolução: "conforme os Termos, isso está previsto".',
+    int:[
+      { id:'433049945', ldap:'dasantos',  ar:10, insight:'SCR com datas específicas do caso — não exemplo genérico', txt:'"Solicitamos a baixa manual no sistema do Boa Vista, e ela já foi efetivamente realizada no dia 03/02/2026. Sobre o SCR/Registrato: o SCR é atualizado uma vez por mês, e a atualização fica visível sempre no dia 20 do mês subsequente. No seu caso, como a baixa ocorreu em 03/02/2026, a alteração no Registrato poderá ser visualizada a partir de 20/03/2026."' },
+      { id:'448224804', ldap:'dzambom',   ar:10, insight:'Política usada para tranquilizar, não para justificar', txt:'"Quando você faz um acordo e paga a primeira parcela, não é necessário esperar quitar tudo para iniciar a regularização do CPF nos órgãos de proteção ao crédito. Ou seja: a primeira informação que você recebeu estava correta. Sinto muito pelo desencontro de orientação no segundo atendimento, porque isso gera insegurança mesmo."' },
+      { id:'428160723', ldap:'gapeixoto', ar:10, insight:'Confirma a baixa antes de explicar o histórico SCR', txt:'"O pagamento dessa dívida foi realizado no dia 19/12/2025 e a baixa da negativação em seu CPF nos órgãos de proteção ao crédito foi realizada no dia 20/12/2025 — você não tem mais restrições em seu nome. Sobre o registro no SCR do BACEN: o sistema funciona como um histórico de crédito e não apaga registros passados, mas isso não representa negativação ativa."' },
+    ],
+    ext:[
+      { id:'438564613', ldap:'ext_ressara',  ar:2.0, txt:'"A gente entende que lidar com várias faturas pode gerar preocupação. Por isso, preparei uma explicação passo a passo: 1. Fatura de novembro (vencimento em 10/11/2025) — A fatura de novembro fechou no valor de R$ 3.090,00. Essa fatura não foi paga até a data de vencimento. Por esse motivo, o valor foi repassado para a fatura seguinte..." [1.200 palavras, sem crédito ou ação ao final]' },
+      { id:'440809064', ldap:'ext_olcpatri', ar:2.0, txt:'"O desconto nos recebíveis é uma medida de segurança que o Mercado Pago pode adotar como garantia do empréstimo. Quando uma venda é registrada e os recebíveis são direcionados, o CERC (registradora responsável por esse controle) verifica se existe parcela do seu empréstimo em aberto. Caso exista, os valores recebidos podem ser utilizados para quitar parcelas em atraso..."' },
+      { id:'448598704', ldap:'ext_nevicent', ar:2.0, txt:'"Gostaria de informar sobre os empréstimos formalizados por meio da Cédula de Crédito Bancário (CCB), conforme as disposições da Lei 10.931/04. Conforme as regras respaldadas pelo Banco Central do Brasil (BACEN, Res Nº 4.771), no momento da contratação do empréstimo, você autoriza expressamente o Mercado Pago a debitar sua conta de pagamento em favor da instituição credora, não sendo possível reembolsar esse valor."' },
+      { id:'439925178', ldap:'ext_almilly',  ar:2.0, txt:'"Após uma análise detalhada, identificamos que a fatura de janeiro não foi paga integralmente e houve atraso na quitação. Como a fatura de fevereiro também chegou à data de vencimento sem o pagamento, o sistema realizou o débito automático para cobrir o mínimo e o parcelamento do saldo restante, conforme Resolução BACEN nº 4.549..." [explica o sistema, não resolve o cliente]' },
+    ],
+    root:'EXT treina a lei como escudo defensivo; INT treina a lei como garantia ao cliente — a diferença está no ponto de vista adotado no treinamento'
+  },
+  {
+    num:'03', title:'Confirmação precisa de operação vs resolução vaga',
+    body:'INT fecha toda resolução financeira com os 3 elementos: valor exato + número de operação + data de disponibilidade. EXT anuncia intenção de creditar ("vou depositar") sem confirmar que o crédito já ocorreu.',
+    int:[
+      { id:'431931117', ldap:'delopes',      ar:10, insight:'Valor + operação + data + palavra "exatamente"', txt:'"O reembolso no valor de R$ 219,49 foi efetuado com sucesso e creditado como saldo em sua conta Mercado Pago no dia 27/01/2026, sob a operação nº 143016796579, exatamente conforme alinhado durante o atendimento telefônico. O valor já está disponível para uso imediato."' },
+      { id:'445402411', ldap:'lucoliveiras', ar:10, insight:'Data específica + número + permissão de uso', txt:'"Creditei em sua conta Mercado Pago o valor integral da sua fatura e ainda creditei um valor de cashback adicional. Esses valores foram creditados em sua conta no dia 19/03 por meio da operação 150318995329. O valor já está disponível e você poderá utilizá-lo para efetuar o pagamento da sua fatura, e o valor restante pode usar como preferir."' },
+      { id:'437416563', ldap:'ndmgomes',     ar:10, insight:'3 elementos em 1 frase — modelo conciso', txt:'"Não queremos que você fique no prejuízo, por isso realizei o estorno no valor de R$ 100,00, que já está disponível na sua conta do Mercado Pago. Você pode consultá-lo acessando Movimentos e localizando o lançamento como \'Crédito excepcional\'. Operação: #147038025044."' },
+    ],
+    ext:[
+      { id:'440100426', ldap:'ext_rhesilva', ar:2.0, txt:'"Pensando em te ajudar da melhor forma possível, gostaria de te propor uma solução excepcional: caso você aceite, posso creditar o valor de R$ 309,00 diretamente na sua conta Mercado Pago. Peço, por gentileza, que me confirme se você concorda com essa proposta e se essa solução resolve o seu problema." [condiciona o crédito à confirmação — sem operação]' },
+      { id:'443127347', ldap:'ext_henasped', ar:2.0, txt:'"Sinto muito de verdade por toda a raiva, o estresse e o constrangimento que essa situação te causou. Eu entendo perfeitamente o seu ponto. Eu vou te explicar com o máximo de clareza e em detalhes o que acontece nesse tipo de caso, porque aqui existe um ponto importante..." [empatia extensa + explicação longa, sem confirmação de crédito]' },
+      { id:'448374670', ldap:'ext_emiasmin', ar:2.0, txt:'"Nossa equipe especializada já encaminhou seu caso para análise junto à bandeira do cartão. Enquanto a análise é realizada, concedemos um crédito provisório no valor de R$400 que já está sendo refletido na sua fatura de abril. O prazo de análise é de até 45 dias..." [menciona crédito mas sem número de operação e sem confirmar disponibilidade]' },
+      { id:'447926439', ldap:'ext_cavajuli', ar:2.0, txt:'"Entendo completamente sua posição em relação ao ocorrido e quero que saiba que estive totalmente comprometida em estar ao seu lado. Nossa prioridade é garantir que suas preocupações sejam ouvidas. Após uma análise cuidadosa, verifiquei que você possui outras compras parceladas e que o valor..." [anúncio de ação sem detalhes de confirmação]' },
+    ],
+    root:'EXT não tem hábito de fechar com os 3 elementos de confirmação — é uma lacuna de treinamento de template, não de intenção'
+  },
+  {
+    num:'04', title:'Acompanhamento ativo vs encerramento prematuro',
+    body:'INT se coloca como dono do caso até a resolução final e retorna proativamente. EXT encerra após 1–2 dias sem retorno do cliente, usando o mesmo template, sem tentativa de ligação.',
+    int:[
+      { id:'438775925', ldap:'gapeixoto',    ar:10, insight:'Comprometimento explícito de continuidade', txt:'"Aqui, confirmei que a exclusão foi processada corretamente e nenhuma de nossas assessorias tem o seu número de telefone cadastrado. Se por acaso você receber qualquer contato sobre esse tema durante a semana, é só me enviar por aqui que consigo ver o que aconteceu. Vou continuar acompanhando o seu caso nos próximos dias para garantir que tudo foi resolvido."' },
+      { id:'445965272', ldap:'abirodrigues', ar:10, insight:'Ownership explícito até a solução total', txt:'"Passando para te informar que já solicitamos a correção do valor referente ao pagamento antecipado da sua parcela. O time responsável está tratando seu caso como prioridade. Assim que houver atualização concreta, retorno diretamente para você por aqui também. Se houver qualquer movimentação estranha ou cobrança adicional, por favor me avise! Sigo acompanhando seu caso até a solução total."' },
+      { id:'434651635', ldap:'thborges',     ar:10, insight:'Responsabilidade pessoal pelo caso — nomeada', txt:'"Eu sou a Thayna, faço parte da equipe do Mercado Pago, e sou responsável do seu caso até a finalização dele. Bruno, geralmente nesses casos a gente não segue com reembolso. Porém, eu vi que você está conosco um pouco mais de um ano, mantendo sempre seus pagamentos em dia, e por isso fiz questão de seguir com uma exceção."' },
+    ],
+    ext:[
+      { id:'430210122', ldap:'ext_nepaiva',  ar:2.0, txt:'"Na tentativa de resolver a situação que contou para a gente, pedimos algumas informações por meio do campo de mensagens privadas do Reclame Aqui em 21/01/2026 e 22/01/2026. Como não recebemos o retorno nos últimos dias, não conseguiremos dar andamento no seu caso. Por isso, estamos encerrando a sua reclamação." [2 dias, sem ligação, sem gesto proativo]' },
+      { id:'429435563', ldap:'ext_iathalia', ar:2.0, txt:'"Na tentativa de resolver a situação que contou para a gente, pedimos algumas informações por meio do campo de mensagens privadas do Reclame Aqui em 28/01 às 08:13 e no dia 30/01 às 08:57. Como não recebemos o retorno nos últimos dias, não conseguiremos dar andamento no seu caso. Por isso, estamos encerrando a sua reclamação." [template idêntico, 2 dias]' },
+      { id:'445343059', ldap:'ext_luicezar', ar:2.0, txt:'"Na tentativa de resolver a situação que contou para a gente, pedimos algumas informações por meio do campo de mensagens privadas do Reclame Aqui em 27/03 às 11:40 e no dia 28/03 às 07:20. Como não recebemos o retorno nos últimos dias, não conseguiremos dar andamento no seu caso. Por isso, estamos encerrando a sua reclamação." [apenas 1 dia de intervalo]' },
+      { id:'431927205', ldap:'ext_aliandre', ar:2.0, txt:'"Recebi atentamente seus argumentos e compreendo sua frustração. Tenha certeza de que seu relato foi analisado com o máximo respeito e prioridade. Entendo que, para você, toda a documentação fornecida já demonstra claramente que o estorno foi realizado pelo banco emissor. No entanto, precisaremos encerrar este atendimento pois não há mais informações adicionais que possamos obter..." [encerramento sem gesto proativo]' },
+    ],
+    root:'Template de encerramento idêntico entre reps EXT — ausência de protocolo de follow-up mínimo: 5 dias + 1 tentativa de ligação documentada'
+  },
+  {
+    num:'05', title:'Personalização e vínculo vs abertura genérica de script',
+    body:'INT cita o tempo de relacionamento do cliente, assina com nome próprio e referencia o caso específico criando vínculo real. EXT abre com o mesmo script padronizado em 90% das mensagens.',
+    int:[
+      { id:'437416563', ldap:'ndmgomes',    ar:10, insight:'Tenure + nome + ação + operação em 3 linhas', txt:'"Após analisar o seu caso, identifiquei que você é nosso cliente desde 2013 e possui um bom histórico com a plataforma. Não queremos que você fique no prejuízo, por isso realizei o estorno no valor de R$ 100,00, que já está disponível na sua conta do Mercado Pago. Operação: #147038025044."' },
+      { id:'428117709', ldap:'edugarcia',   ar:10, insight:'Parceria histórica acionada como motivo da exceção', txt:'"Voltei para te ajudar e tenho ótimas notícias! Reembolsamos o valor de R$400,00 como saldo em sua conta Mercado Pago referente ao valor debitado anteriormente. Oswaldo, nossa parceria dura desde 2013 e de forma alguma te deixaríamos no prejuízo. Mais uma vez peço desculpas pelo ocorrido e fico muito feliz em te ajudar!"' },
+      { id:'433386156', ldap:'inigsantos',  ar:10, insight:'Tenure como justificativa para tratamento prioritário', txt:'"Como você é um cliente parceiro nosso desde 2023, fiz questão de assumir o seu caso para resolver isso definitivamente agora: Devolução do Valor: Já realizei a bonificação do valor total de R$ 105,00 diretamente na sua conta Mercado Pago. O saldo já está disponível."' },
+    ],
+    ext:[
+      { id:'446906171', ldap:'ext_kauanhfe', ar:2.0, txt:'"Olá, Mônica. Espero que esteja tudo bem com você! Me chamo Kauanh, sou representante do Mercado Pago na plataforma do Reclame Aqui e sou responsável por te auxiliar na resolução do seu caso. Entendo perfeitamente sua preocupação e gostaria de agradecer pela clareza e respeito em seu relato..." [abertura correta mas sem nenhuma referência ao histórico ou tempo de conta da cliente]' },
+      { id:'440447820', ldap:'ext_cavajuli', ar:2.0, txt:'"Olá, David. Espero que esteja bem! Prazer, me chamo Júlia e falo em nome do Mercado Pago, referente a sua manifestação no Reclame Aqui. Entendo completamente sua posição em relação ao ocorrido e quero que saiba que estive totalmente comprometida em estar ao seu lado. Nossa prioridade é garantir que suas preocupações sejam ouvidas..." [linguagem de ownership sem dados reais do cliente]' },
+      { id:'439913672', ldap:'ext_olcpatri', ar:2.0, txt:'"Olá, Mariana! Espero que você esteja bem. Aqui é a Patrícia. Verificamos cuidadosamente a sua solicitação junto à nossa equipe especializada e, após a análise do seu caso, confirmamos que no momento ainda não há propostas disponíveis para negociação do débito em aberto..." [cliente não referenciada pelo histórico; resposta sem nenhuma personalização real]' },
+    ],
+    root:'EXT usa template de abertura padronizado sem personalizar com dados do cliente — tenure, histórico de pagamentos, contexto específico do caso'
+  },
+  {
+    num:'06', title:'Empatia contextualizada vs empatia de script',
+    body:'INT ancora a empatia em detalhes factuais do caso ("você tentou pelo celular da sua mãe", "nossa parceria dura desde 2013") provando que leu o relato. EXT usa frases genéricas que poderiam estar em qualquer caso.',
+    int:[
+      { id:'440656501', ldap:'inigsantos',  ar:10, insight:'Detalhes factuais provam leitura real do relato', txt:'"É desesperador tentar contato em um momento de urgência, tanto pelo aplicativo quanto pelo celular da sua mãe, e não ter o retorno imediato que você precisava. Peço sinceras desculpas por essa falha no nosso suporte; você tem toda a razão em se sentir desassistido naquele momento, e já estamos trabalhando internamente para que essa dificuldade de contato não se repita."' },
+      { id:'434651635', ldap:'thborges',    ar:10, insight:'Repete o relato do cliente com as palavras dele', txt:'"Bruno, vimos a sua manifestação e entendemos que você realizou o pagamento da fatura atual assumindo encargos que considera indevidos para evitar restrições, e agora solicita o reembolso desses valores. Você relata que essas cobranças decorrem de um atraso causado exclusivamente por instabilidade no seu banco de origem, correto?"' },
+      { id:'448224804', ldap:'dzambom',     ar:10, insight:'Reconhece o erro de orientação anterior com honestidade', txt:'"Antes de tudo, espero de coração que você já esteja se sentindo melhor em relação à sua saúde. Eu imagino o quanto é desgastante passar por isso e ainda precisar lidar com preocupação de nome restrito. Sinto muito pelo desencontro de orientação no segundo atendimento, porque isso gera insegurança mesmo."' },
+    ],
+    ext:[
+      { id:'430794148', ldap:'ext_sosantim', ar:2.0, txt:'"Sinto muito por tudo o que você passou, especialmente por ter tido o celular roubado e ainda precisar lidar com um empréstimo que você não reconhece. Entendo o quanto isso é angustiante e o impacto que causa na sua sensação de segurança e no seu dia a dia financeiro. Quero te tranquilizar informando que já estamos dando andamento ao seu caso internamente..." [empatia genuína — cita o assalto — mas não oferece ação, redireciona para equipe]' },
+      { id:'443127347', ldap:'ext_henasped', ar:2.0, txt:'"Sinto muito de verdade por toda a raiva, o estresse e o constrangimento que essa situação te causou. Eu entendo perfeitamente o seu ponto: não é sobre receber o reembolso. É sobre ver as parcelas sendo antecipadas na fatura sem você ter pedido isso, e a sensação de que algo foi feito fora do que você esperava e do que seria justo. Eu vou te explicar com o máximo de clareza..." [empatia certeira + explicação longa sem resolução — bom começo, perda no final]' },
+      { id:'433245104', ldap:'ext_sosantim', ar:2.0, txt:'"Olá, Jose. Espero que esteja bem. É a Mariane novamente. Queremos muito ajudar você e buscamos resolver o quanto antes a situação que nos relatou. Por isso, solicitamos algumas informações pelo campo de mensagens privadas do Reclame Aqui em 06/02/2026 às 08:31 e novamente em 07/02/2026 às 07:44. Como não tivemos retorno nos últimos dias, não conseguiremos dar andamento..." [abertura empática de script + encerramento]' },
+    ],
+    root:'EXT tem empatia de protocolo ("entendo perfeitamente") sem ancorar em fatos do caso — o cliente percebe que é um script. INT ancora a empatia em detalhes reais que provam leitura ativa do relato'
+  },
+];
+
+const acoes = [
+  { prio:'Crítico', acao:'Calibração: resolução financeira proativa na 1ª mensagem privada — crédito/reembolso com operação, valor e data', causa:'Padrão 01 e 05', alvo:'ext_salesjos · ext_luicezar · ext_yankeven', dono:'TL EXT' },
+  { prio:'Crítico', acao:'Template atualizado: SCR/BACEN com datas específicas do caso (não exemplo genérico)', causa:'Padrão 02', alvo:'Todo EXT — Consumer Credits dívida', dono:'TL EXT + Qualidade' },
+  { prio:'Alto',    acao:'Proibir encerramento de reclamação por falta de resposta sem: mínimo 5 dias + 1 ligação documentada', causa:'Padrão 04', alvo:'ext_luicezar · ext_nevicent', dono:'TL EXT' },
+  { prio:'Alto',    acao:'Habilitar e treinar cupom CXMP30 e crédito excepcional para clientes com histórico > 2 anos', causa:'Padrão 01', alvo:'ext_almilly · ext_sosantim', dono:'TL EXT' },
+  { prio:'Alto',    acao:'Padrão de confirmação de operação (valor + nº operação + data disponibilidade) em toda resolução financeira', causa:'Padrão 05', alvo:'ext_hudvinic · ext_almilly', dono:'TL EXT' },
+  { prio:'Médio',   acao:'Calibração: assinatura com primeiro nome + ownership — eliminar "Equipe Mercado Pago" como fechamento único', causa:'Qualidade geral', alvo:'Todo EXT low AR', dono:'TL EXT' },
+  { prio:'Médio',   acao:'Calibração ext_emiasmin: AR60 em 91.3% — revisão de prazo de resposta e profundidade técnica', causa:'Padrão 03 + AR60', alvo:'ext_emiasmin', dono:'TL EXT' },
+];
+
+// ── Charts ────────────────────────────────────────────
+const arLabelPlugin = {
+  id: 'arLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      const vols = i === 0 ? volInt : volExt;
+      const color = i === 0 ? '#58a6ff' : '#f0883e';
+      meta.data.forEach((pt, j) => {
+        const ar  = ds.data[j].toFixed(2);
+        const vol = vols[j].toLocaleString('pt-BR') + ' avaliações';
+        const x   = pt.x;
+        const yAR  = i === 0 ? pt.y - 16 : pt.y + 16;
+        const yVol = i === 0 ? pt.y - 4  : pt.y + 28;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 11px -apple-system,sans-serif';
+        ctx.fillStyle = color;
+        ctx.fillText(ar, x, yAR);
+        ctx.font = '10px -apple-system,sans-serif';
+        ctx.fillStyle = '#8b949e';
+        ctx.fillText(vol, x, yVol);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+new Chart(document.getElementById('c-ar'), {
+  plugins: [arLabelPlugin],
+  type:'line',
+  data:{ labels:months, datasets:[
+    { label:'INT', data:arInt, borderColor:'#58a6ff', backgroundColor:'rgba(88,166,255,.08)', tension:.35, fill:true, pointRadius:6, pointBackgroundColor:'#58a6ff' },
+    { label:'EXT', data:arExt, borderColor:'#f0883e', backgroundColor:'rgba(240,136,62,.08)', tension:.35, fill:true, pointRadius:6, pointBackgroundColor:'#f0883e' }
+  ]},
+  options:{
+    responsive:true,
+    layout:{ padding:{ top:44, bottom:36 } },
+    plugins:{
+      legend:{ labels:{ color:'#e6edf3', usePointStyle:true } },
+      tooltip:{ ...TT, callbacks:{ label: ctx => ` AR: ${ctx.raw.toFixed(2)}  ·  ${(ctx.datasetIndex===0?volInt:volExt)[ctx.dataIndex].toLocaleString('pt-BR')} avaliações` } }
+    },
+    scales:{
+      x:{ ticks:{color:'#8b949e'}, grid:{color:'#21262d'} },
+      y:{ min:6.0, max:9.8, ticks:{color:'#8b949e', callback:v=>v.toFixed(1)}, grid:{color:'#21262d'} }
+    }
+  }
+});
+
+new Chart(document.getElementById('c-vol'), {
+  type:'bar',
+  data:{ labels:months, datasets:[
+    { label:'INT', data:volInt, backgroundColor:'rgba(88,166,255,.7)',  borderRadius:4 },
+    { label:'EXT', data:volExt, backgroundColor:'rgba(240,136,62,.7)',  borderRadius:4 }
+  ]},
+  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e6edf3', usePointStyle:true } }, tooltip:TT },
+    scales:{ x:{ ticks:{color:'#8b949e'}, grid:{color:'#21262d'} },
+             y:{ ticks:{color:'#8b949e'}, grid:{color:'#21262d'} } } }
+});
+
+
+// ── Dados de Soluções (pivot INT/EXT) ────────────────
+// [processo_short, solucao, volInt, arInt, volExt, arExt, cdu]
+const solRaw = [
+  ['Consumer Credits',    'Acordo de dívida - Como visualizar detalhes',                      45,  7.809, 215,  7.846, 'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'Negativação em centrais de risco (SCR/Boa Vista)',                135,  9.190, 122,  8.770, 'Regulamentos'],
+  ['Pagamentos - Cards',  'TC - Quer cancelar - Resposta',                                   185,  8.813,  37,  8.346, 'Quero meu dinheiro de volta'],
+  ['Pagamentos - Cards',  'TC - Não reconheço uma compra — Chargeback em andamento',          47,  8.991,  93,  8.545, 'Eu não fiz esse pagamento'],
+  ['Funcionalidades CC',  'TC - Como pagar a fatura do cartão de crédito',                    76,  8.592,  55,  7.467, 'Consultas por Resumen'],
+  ['Consumer Credits',    '[SHS] Usuário em dívida - Resposta consulta',                      89,  7.330,  36,  5.775, 'Consultas por atraso de pagamento'],
+  ['Pagamentos - Cards',  'TC - Cancelar compra — Reembolso confirmado na fatura',            71,  8.673,  51,  8.025, 'Quero meu dinheiro de volta'],
+  ['Consumer Credits',    '[SHS] Negativado Boa Vista/Serasa - Dívida paga',                  63,  9.037,  41,  9.032, 'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'Como pagar as parcelas',                                            64,  7.439,  36,  7.506, 'Pagamento de parcelas'],
+  ['Funcionalidades CC',  'TC - Explicação da fatura — Detalhes dos juros e taxas',           54,  9.374,  39,  8.223, 'Consultas por Resumen'],
+  ['Funcionalidades CC',  'TC - Explicamos a fatura e limite',                                 14,  7.650,  81,  7.520, 'Consultas por Resumen'],
+  ['Consumer Credits',    'Dinheiro debitado',                                                 61,  8.677,  30,  7.333, 'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'Reclamação de contato — Contato indevido de terceiros',             52,  8.483,  35,  8.149, 'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'Reclamação de contato — Contato para terceiros',                    30,  7.943,  54,  7.483, 'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'Desconhece Crédito — Sem suspeitas de ATO',                        31,  5.471,  43,  5.265, 'Cancelamento e desconhecimento do crédito'],
+  ['Consumer Credits',    'Pedido de dados — Solicitamos dados para gestão',                   11,  7.900,  25,  5.248, 'Gerais'],
+  ['Funcionalidades CC',  'TC - Consulta de Juros — Cobrança Correta',                        25,  8.992,  22,  7.900, 'Consultas por Resumen'],
+  ['Funcionalidades CC',  'TC - Como cancelar meu cartão',                                     20,  6.940,  24,  6.996, 'Funcionales'],
+  ['SHS - Caso Recusado', 'MP - Reclamação de Outra Empresa',                                null,   null,  19,  4.474, 'Contato de Terceiro'],
+  ['Funcionalidades CC',  'TC - Por qué tengo un parcelamento automático?',                    17,  5.459,  18,  3.478, 'Consultas por Resumen'],
+  ['Pagamentos - Cards',  'Pedido de dados — Solicitamos dados para gestão',                   17,  9.165,  17,  4.771, 'Gerais'],
+  ['Consumer Credits',    'Reclamação contato — Pausa temporária sem condição',                14,  9.221,  null, null,  'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    '[SHS] Usuário em dívida - Consultar',                               34,  7.115,  null, null,  'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'Geral Bugs — Resposta Consulta',                                    30,  8.183,  null, null,  'Bugs'],
+  ['Consumer Credits',    'Detalhes informativos sobre o crédito',                            null,   null,  24,  7.554, 'Como funciona Credits'],
+  ['Consumer Credits',    'Consequências do atraso da parcela',                               null,   null,  12,  3.733, 'Consultas por atraso de pagamento'],
+  ['Consumer Credits',    'CERC — Como funciona CERC em empréstimos',                         null,   null,   9,  4.900, 'Consultas por atraso de pagamento'],
+  ['Funcionalidades CC',  'TC - Recebeu chamada sobre atraso — Detalhes',                      18,  6.900,  17,  7.176, 'Consultas por Resumen'],
+  ['Consumer Credits',    '[SHS] Usuário em dívida - Envio de proposta',                       22,  5.732,   9,  7.733, 'Consultas por atraso de pagamento'],
+  ['Pagamentos - Cards',  'TC - Não reconheço compra — Não podemos prosseguir (chargeback)',   14,  7.779,  13,  6.900, 'Eu não fiz esse pagamento'],
+].map(r => ({
+  proc: r[0], sol: r[1],
+  vi: r[2], ai: r[3],
+  ve: r[4], ae: r[5],
+  cdu: r[6],
+  total: (r[2]||0) + (r[4]||0),
+  gap: (r[3] && r[5]) ? parseFloat((r[5]-r[3]).toFixed(3)) : null
+})).sort((a,b) => (b.ve||0) - (a.ve||0));
+
+new Chart(document.getElementById('c-ldap'), {
+  type:'bar',
+  data:{
+    labels: ldaps.map(l=>l.l),
+    datasets:[{ label:'AR Médio', data:ldaps.map(l=>l.ar),
+      backgroundColor: ldaps.map(l=>l.ar<7?'rgba(248,81,73,.75)':l.ar<7.5?'rgba(240,136,62,.75)':'rgba(210,153,34,.75)'),
+      borderRadius:4 }]
+  },
+  options:{ indexAxis:'y', responsive:true,
+    plugins:{ legend:{display:false}, tooltip:TT },
+    scales:{ x:{ min:5.5, max:8.5, ticks:{color:'#8b949e', callback:v=>v.toFixed(1)}, grid:{color:'#21262d'} },
+             y:{ ticks:{color:'#e6edf3', font:{size:12}}, grid:{color:'#21262d'} } } }
+});
+
+// ── Populate tables ───────────────────────────────────
+const tbProc = document.getElementById('tbody-proc');
+processos.forEach(p => {
+  const g = p.gap;
+  const bc = g<=-2?'b-red':g<=-1?'b-orange':g<=-.5?'b-yellow':'b-muted';
+  const cl = g<=-2?'Crítico':g<=-1?'Alto':g<=-.5?'Médio':'Baixo';
+  const gc = g<=-2?'var(--red)':g<=-1?'var(--ext)':g<=-.5?'var(--yellow)':'var(--muted)';
+  tbProc.innerHTML += `<tr>
+    <td>${p.p}</td>
+    <td style="color:var(--muted)">${p.cdu}</td>
+    <td><span class="badge b-int">${p.vi}</span></td>
+    <td style="color:var(--int);font-weight:600">${p.ai.toFixed(2)}</td>
+    <td><span class="badge b-ext">${p.ve}</span></td>
+    <td style="color:var(--ext);font-weight:600">${p.ae.toFixed(2)}</td>
+    <td style="color:${gc};font-weight:600">${g.toFixed(2)}</td>
+    <td><span class="badge ${bc}">${cl}</span></td>
+  </tr>`;
+});
+
+const tbLdap = document.getElementById('tbody-ldap');
+ldaps.forEach((l,i) => {
+  const bc = l.prio==='Crítico'?'b-red':l.prio==='Alto'?'b-orange':'b-yellow';
+  const dc = l.prio==='Crítico'?'dot-red':l.prio==='Alto'?'dot-orange':'dot-yellow';
+  const ac = l.ar<7?'var(--red)':l.ar<7.5?'var(--ext)':'var(--yellow)';
+  const a6c = parseFloat(l.ar60)<95?'var(--red)':'var(--muted)';
+  tbLdap.innerHTML += `<tr>
+    <td style="color:var(--dim)">${i+1}</td>
+    <td style="color:var(--ext);font-weight:600">${l.l}</td>
+    <td style="color:var(--muted);font-size:11.5px">${l.proc}</td>
+    <td>${l.vol}</td>
+    <td style="color:${ac};font-weight:600">${l.ar.toFixed(2)}</td>
+    <td style="color:${a6c}">${l.ar60}</td>
+    <td><span class="badge ${bc}"><span class="dot ${dc}"></span>${l.prio}</span></td>
+  </tr>`;
+});
+
+const pc = document.getElementById('pat-container');
+patterns.forEach(p => {
+  const renderInt = ex => ex.map(e => {
+    const complaint = complaints[e.id] ? `<div class="ex-complaint"><span class="ex-complaint-lbl">📋 Reclamação do cliente</span>${complaints[e.id]}</div>` : '';
+    return `
+    <div class="ex-item bom">
+      <div class="ex-meta">
+        <span class="case-chip">#${e.id}</span>
+        <span class="ldap-bom">${e.ldap}</span>
+        <span class="ar-bom">AR ${e.ar.toFixed(1)}</span>
+      </div>
+      ${complaint}
+      <span class="ex-resp-lbl bom">💬 Resposta privada (referência)</span>
+      <div class="ex-txt">${e.txt}</div>
+      ${e.insight ? `<div class="ex-insight">✓ ${e.insight}</div>` : ''}
+    </div>`;}).join('');
+
+  const renderExt = ex => ex.map(e => {
+    const complaint = complaints[e.id] ? `<div class="ex-complaint"><span class="ex-complaint-lbl">📋 Reclamação do cliente</span>${complaints[e.id]}</div>` : '';
+    return `
+    <div class="ex-item ruim">
+      <div class="ex-meta">
+        <span class="case-chip">#${e.id}</span>
+        <span class="ldap-ext">${e.ldap}</span>
+        <span class="ar-ruim">AR ${e.ar.toFixed(1)}</span>
+      </div>
+      ${complaint}
+      <span class="ex-resp-lbl ruim">💬 Resposta privada (ponto de melhoria)</span>
+      <div class="ex-txt">${e.txt}</div>
+    </div>`;}).join('');
+
+  pc.innerHTML += `
+  <div class="pat-card">
+    <div class="pat-num">Padrão ${p.num}</div>
+    <div class="pat-title">${p.title}</div>
+    <div class="pat-body">${p.body}</div>
+    <div class="cmp-row">
+      <div class="cmp-col">
+        <div class="cmp-hdr int">✅ INT — Referência de Qualidade</div>
+        ${renderInt(p.int)}
+      </div>
+      <div class="cmp-col">
+        <div class="cmp-hdr ext">🔧 EXT — Ponto de Melhoria</div>
+        ${renderExt(p.ext)}
+      </div>
+    </div>
+    <div class="root">⚡ Causa-raiz: ${p.root}</div>
+  </div>`;
+});
+
+// ── Soluções table ────────────────────────────────────
+const tbSol = document.getElementById('tbody-sol');
+solRaw.forEach((s, i) => {
+  const isCrit = (s.ae !== null && s.ae < 6.0) || (s.gap !== null && s.gap <= -3.0);
+  const isAlto = !isCrit && s.gap !== null && s.gap <= -1.0 && (s.ve||0) >= 15;
+  const isAten = !isCrit && !isAlto && s.gap !== null && s.gap <= -0.5 && (s.ve||0) >= 10;
+
+  const rowBg  = isCrit ? 'rgba(248,81,73,.04)' : isAlto ? 'rgba(240,136,62,.04)' : isAlto ? 'rgba(210,153,34,.03)' : '';
+  const bc     = isCrit ? 'b-red' : isAlto ? 'b-orange' : isAten ? 'b-yellow' : 'b-muted';
+  const dc     = isCrit ? 'dot-red' : isAlto ? 'dot-orange' : isAten ? 'dot-yellow' : '';
+  const label  = isCrit ? 'Crítico' : isAlto ? 'Alto' : isAten ? 'Atenção' : '—';
+  const gapColor = s.gap <= -1 ? 'var(--red)' : s.gap <= -.5 ? 'var(--ext)' : s.gap < 0 ? 'var(--yellow)' : 'var(--green)';
+  const gapStr = s.gap !== null ? `<span style="color:${gapColor};font-weight:600">${s.gap.toFixed(2)}</span>` : '<span style="color:var(--dim)">—</span>';
+  const arInt  = s.ai !== null ? `<span style="color:var(--int);font-weight:600">${s.ai.toFixed(2)}</span>` : '<span style="color:var(--dim)">—</span>';
+  const arExt  = s.ae !== null ? `<span style="color:${s.ae<6?'var(--red)':s.ae<7.5?'var(--ext)':'var(--text)'};font-weight:600">${s.ae.toFixed(2)}</span>` : '<span style="color:var(--dim)">—</span>';
+  const dotHtml = dc ? `<span class="dot ${dc}" style="margin-right:5px"></span>` : '';
+
+  tbSol.innerHTML += `<tr style="background:${rowBg}">
+    <td style="color:var(--dim)">${i+1}</td>
+    <td style="font-size:11.5px;color:var(--muted)">${s.proc}</td>
+    <td style="font-size:12px"><span style="display:block">${s.sol}</span>${s.cdu ? `<span style="display:block;font-size:10.5px;color:var(--dim);margin-top:3px;font-weight:600;letter-spacing:.3px">${s.cdu}</span>` : ''}</td>
+    <td style="text-align:center">${s.vi !== null ? `<span class="badge b-int">${s.vi}</span>` : '<span style="color:var(--dim)">—</span>'}</td>
+    <td>${arInt}</td>
+    <td style="text-align:center">${s.ve !== null ? `<span class="badge b-ext">${s.ve}</span>` : '<span style="color:var(--dim)">—</span>'}</td>
+    <td>${arExt}</td>
+    <td>${gapStr}</td>
+    <td><span class="badge ${bc}">${dotHtml}${label}</span></td>
+  </tr>`;
+});
+
+const tbAcao = document.getElementById('tbody-acao');
+acoes.forEach(a => {
+  const bc = a.prio==='Crítico'?'b-red':a.prio==='Alto'?'b-orange':'b-yellow';
+  const dc = a.prio==='Crítico'?'dot-red':a.prio==='Alto'?'dot-orange':'dot-yellow';
+  tbAcao.innerHTML += `<tr>
+    <td><span class="badge ${bc}"><span class="dot ${dc}"></span>${a.prio}</span></td>
+    <td>${a.acao}</td>
+    <td style="color:var(--muted);font-size:11.5px">${a.causa}</td>
+    <td style="color:var(--ext);font-size:11.5px">${a.alvo}</td>
+    <td><span class="badge b-int">${a.dono}</span></td>
+  </tr>`;
+});
+</script>
+</body>
+</html>
