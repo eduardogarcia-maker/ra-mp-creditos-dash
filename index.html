@@ -131,6 +131,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.expand-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;margin-top:4px;transition:.15s}
+.expand-btn:hover{color:var(--text);border-color:var(--ext)}
+.expand-btn.open{color:var(--ext);border-color:var(--ext)}
+.expand-row td{padding:8px 12px 12px 12px;background:var(--bg3)}
+.case-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.case-pill{font-family:monospace;font-size:10.5px;background:var(--ext-bg);color:var(--ext);padding:2px 8px;border-radius:3px;cursor:default}
 </style>
 </head>
 <body>
@@ -596,6 +603,47 @@ new Chart(document.getElementById('c-vol'), {
 
 // ── Dados de Soluções (pivot INT/EXT) ────────────────
 // [processo_short, solucao, volInt, arInt, volExt, arExt, cdu]
+
+function toggleSol(i) {
+  const row = document.getElementById('xrow-'+i);
+  const btn = document.getElementById('xbtn-'+i);
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  btn.textContent = open ? '▶ ver casos EXT' : '▼ ocultar';
+  btn.classList.toggle('open', !open);
+}
+
+const solCases = {
+  'Acordo de dívida - Como visualizar detalhes': [438816707,433885082,441024838,431538011,444694864,433245126,431722841,435586161,433222888,428113068],
+  'CERC — Como funciona CERC em empréstimos': [440910266,444014288,445429139,442809466,448486300,432581468,442567249,430734096,431132815,440809064],
+  'Como pagar as parcelas': [426952474,437534973,444105398,426883014,437767052,443201700,448366494,447901661,445869319,431760652],
+  'Consequências do atraso da parcela': [430802488,431389055,442771065,442843993,440518617,448484841,439835996,442710732,442446326,435191501],
+  'Desconhece Crédito — Sem suspeitas de ATO': [436118944,447733100,448829751,431539275,436120783,441573652,438062522,443740304,437868129,449361132],
+  'Detalhes informativos sobre o crédito': [432417582,447708469,446810143,431780018,434095526,429384373,429159397,429382896,439573161,433058902],
+  'Dinheiro debitado': [438345122,445685860,437151850,442359659,437503475,429532442,442543075,429753734,448598704,433974167],
+  'Geral Bugs — Resposta Consulta': [433057466],
+  'MP - Reclamação de Outra Empresa': [437701022,443732782,440541131,428369340,440443981,442258166,429384512,444363344,433671792,428369356],
+  'Negativação em centrais de risco (SCR/Boa Vista)': [431456113,441030502,430311369,444870434,436762477,445560516,442458823,448428908,446060493,446221492],
+  'Pedido de dados — Solicitamos dados para gestão': [440561447,441516079,434448325,428303779,442402812,433219715,434917691,434195460,443360533,448591991],
+  'Reclamação de contato — Contato indevido de terceiros': [438648031,445291811,436621999,445802197,440802656,433218178,441538861,447682719,447034871,434596285],
+  'Reclamação de contato — Contato para terceiros': [433235408,442541166,429734194,431948496,436602612,440608383,438431401,444826357,437080290,434259549],
+  'TC - Cancelar compra — Reembolso confirmado na fatura': [437486153,441105676,447353544,431959531,427052398,442476606,438945434,444453905,444901145,444611116],
+  'TC - Como cancelar meu cartão': [447207488,433670349,431582285,430419775,444885508,430350707,448971888,443693373,431132809,431942522],
+  'TC - Como pagar a fatura do cartão de crédito': [437684992,448611455,442451746,436788911,437897479,437107796,439823049,440905000,443742378,444830105],
+  'TC - Consulta de Juros — Cobrança Correta': [436008757,444910630,440931632,436813078,427808102,445819149,442349034,434884515,436866681,439847329],
+  'TC - Explicamos a fatura e limite': [438062552,431789732,439940709,436406263,436659611,429382849,439038929,434829435,430374434,443127347],
+  'TC - Explicação da fatura — Detalhes dos juros e taxas': [436738185,442589031,445730843,431563164,435943840,442487263,433392986,449723611,429884660,430366897],
+  'TC - Não reconheço compra — Não podemos prosseguir (chargeback)': [444878811,448948120,448629268,446417745,444149411,431574282,432439640,440431932,442953602,437846147],
+  'TC - Não reconheço uma compra — Chargeback em andamento': [435975341,446381373,428910687,433858754,440753951,450109575,430070476,442953606,429422414,448387646],
+  'TC - Por qué tengo un parcelamento automático?': [433903292,446879944,433058911,448740598,444955941,434849121,438564613,440414358,445092541,430228196],
+  'TC - Quer cancelar - Resposta': [434463531,435966676,444875124,429998543,444088409,438634433,436302040,447908552,436258732,428691892],
+  'TC - Recebeu chamada sobre atraso — Detalhes': [435642245,427715332,437083037,437098167,429024472,430779972,443133144,435416715,447562949,433056722],
+  '[SHS] Negativado Boa Vista/Serasa - Dívida paga': [436095747,443117721,431567356,431550274,431900614,427042384,433249253,447720346,430392578,436185077],
+  '[SHS] Usuário em dívida - Consultar': [429160765,441525663,447704961,433306953],
+  '[SHS] Usuário em dívida - Envio de proposta': [427789068,438442355,428742336,433058915,445643161,440836450,431813946,438356667,436641862,440871400],
+  '[SHS] Usuário em dívida - Resposta consulta': [440905453,446318608,440935158,440730407,432007674,431860690,428111453,440447803,437217485,446968332],
+};
+
 const solRaw = [
   ['Consumer Credits',    'Acordo de dívida - Como visualizar detalhes',                      45,  7.809, 215,  7.846, 'Consultas por atraso de pagamento'],
   ['Consumer Credits',    'Negativação em centrais de risco (SCR/Boa Vista)',                135,  9.190, 122,  8.770, 'Regulamentos'],
@@ -753,17 +801,33 @@ solRaw.forEach((s, i) => {
   const arExt  = s.ae !== null ? `<span style="color:${s.ae<6?'var(--red)':s.ae<7.5?'var(--ext)':'var(--text)'};font-weight:600">${s.ae.toFixed(2)}</span>` : '<span style="color:var(--dim)">—</span>';
   const dotHtml = dc ? `<span class="dot ${dc}" style="margin-right:5px"></span>` : '';
 
+  const extCases = solCases[s.sol] || [];
+  const hasCases = extCases.length > 0;
+  const pillsHtml = extCases.map(id => `<span class="case-pill">#${id}</span>`).join('');
+
   tbSol.innerHTML += `<tr style="background:${rowBg}">
     <td style="color:var(--dim)">${i+1}</td>
     <td style="font-size:11.5px;color:var(--muted)">${s.proc}</td>
-    <td style="font-size:12px"><span style="display:block">${s.sol}</span>${s.cdu ? `<span style="display:block;font-size:10.5px;color:var(--dim);margin-top:3px;font-weight:600;letter-spacing:.3px">${s.cdu}</span>` : ''}</td>
+    <td style="font-size:12px">
+      <span style="display:block">${s.sol}</span>
+      ${s.cdu ? `<span style="display:block;font-size:10.5px;color:var(--dim);margin-top:3px;font-weight:600;letter-spacing:.3px">${s.cdu}</span>` : ''}
+      ${hasCases ? `<button class="expand-btn" id="xbtn-${i}" onclick="toggleSol(${i})">&#9654; ver casos EXT</button>` : ''}
+    </td>
     <td style="text-align:center">${s.vi !== null ? `<span class="badge b-int">${s.vi}</span>` : '<span style="color:var(--dim)">—</span>'}</td>
     <td>${arInt}</td>
     <td style="text-align:center">${s.ve !== null ? `<span class="badge b-ext">${s.ve}</span>` : '<span style="color:var(--dim)">—</span>'}</td>
     <td>${arExt}</td>
     <td>${gapStr}</td>
     <td><span class="badge ${bc}">${dotHtml}${label}</span></td>
-  </tr>`;
+  </tr>
+  ${hasCases ? `<tr id="xrow-${i}" style="display:none">
+    <td colspan="9">
+      <div style="padding:8px 4px 4px 4px">
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:8px">Amostra EXT (${extCases.length} casos)</span>
+        <div class="case-pills">${pillsHtml}</div>
+      </div>
+    </td>
+  </tr>` : ''}`;
 });
 
 const tbAcao = document.getElementById('tbody-acao');
