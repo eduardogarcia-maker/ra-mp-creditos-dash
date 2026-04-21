@@ -212,7 +212,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <canvas id="c-ar" height="200"></canvas>
     </div>
     <div class="cbox">
-      <h3>Volume Mensal — INT vs EXT</h3>
+      <h3>Outgoing Mensal — INT vs EXT</h3>
       <canvas id="c-vol" height="200"></canvas>
     </div>
   </div>
@@ -563,44 +563,14 @@ const acoes = [
 ];
 
 // ── Charts ────────────────────────────────────────────
-const arLabelPlugin = {
-  id: 'arLabels',
-  afterDatasetsDraw(chart) {
-    const { ctx } = chart;
-    chart.data.datasets.forEach((ds, i) => {
-      const meta = chart.getDatasetMeta(i);
-      const vols = i === 0 ? volInt : volExt;
-      const color = i === 0 ? '#58a6ff' : '#f0883e';
-      meta.data.forEach((pt, j) => {
-        const ar  = ds.data[j].toFixed(2);
-        const vol = vols[j].toLocaleString('pt-BR') + ' avaliações';
-        const x   = pt.x;
-        const yAR  = i === 0 ? pt.y - 16 : pt.y + 16;
-        const yVol = i === 0 ? pt.y - 4  : pt.y + 28;
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.font = 'bold 11px -apple-system,sans-serif';
-        ctx.fillStyle = color;
-        ctx.fillText(ar, x, yAR);
-        ctx.font = '10px -apple-system,sans-serif';
-        ctx.fillStyle = '#8b949e';
-        ctx.fillText(vol, x, yVol);
-        ctx.restore();
-      });
-    });
-  }
-};
-
 new Chart(document.getElementById('c-ar'), {
-  plugins: [arLabelPlugin],
   type:'line',
   data:{ labels:months, datasets:[
-    { label:'INT', data:arInt, borderColor:'#58a6ff', backgroundColor:'rgba(88,166,255,.08)', tension:.35, fill:true, pointRadius:6, pointBackgroundColor:'#58a6ff' },
-    { label:'EXT', data:arExt, borderColor:'#f0883e', backgroundColor:'rgba(240,136,62,.08)', tension:.35, fill:true, pointRadius:6, pointBackgroundColor:'#f0883e' }
+    { label:'INT', data:arInt, borderColor:'#58a6ff', backgroundColor:'rgba(88,166,255,.08)', tension:.35, fill:true, pointRadius:5, pointBackgroundColor:'#58a6ff' },
+    { label:'EXT', data:arExt, borderColor:'#f0883e', backgroundColor:'rgba(240,136,62,.08)', tension:.35, fill:true, pointRadius:5, pointBackgroundColor:'#f0883e' }
   ]},
   options:{
     responsive:true,
-    layout:{ padding:{ top:44, bottom:36 } },
     plugins:{
       legend:{ labels:{ color:'#e6edf3', usePointStyle:true } },
       tooltip:{ ...TT, callbacks:{ label: ctx => ` AR: ${ctx.raw.toFixed(2)}  ·  ${(ctx.datasetIndex===0?volInt:volExt)[ctx.dataIndex].toLocaleString('pt-BR')} avaliações` } }
