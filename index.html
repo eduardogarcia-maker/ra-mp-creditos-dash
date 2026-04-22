@@ -302,7 +302,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <h3>Ranking de Ofensores</h3>
       <table>
         <thead>
-          <tr><th>#</th><th>LDAP</th><th>Processo</th><th>Vol</th><th>AR</th><th>AR60</th><th>Prior.</th></tr>
+          <tr><th>#</th><th>LDAP</th><th>Processo</th><th>Vol</th><th>AR</th><th>Prior.</th></tr>
         </thead>
         <tbody id="tbody-ldap"></tbody>
       </table>
@@ -722,14 +722,12 @@ ldaps.forEach((l,i) => {
   const bc = l.prio==='Crítico'?'b-red':l.prio==='Alto'?'b-orange':'b-yellow';
   const dc = l.prio==='Crítico'?'dot-red':l.prio==='Alto'?'dot-orange':'dot-yellow';
   const ac = l.ar<7?'var(--red)':l.ar<7.5?'var(--ext)':'var(--yellow)';
-  const a6c = parseFloat(l.ar60)<95?'var(--red)':'var(--muted)';
   tbLdap.innerHTML += `<tr>
     <td style="color:var(--dim)">${i+1}</td>
     <td style="color:var(--ext);font-weight:600">${l.l}</td>
     <td style="color:var(--muted);font-size:11.5px">${l.proc}</td>
     <td>${l.vol}</td>
     <td style="color:${ac};font-weight:600">${l.ar.toFixed(2)}</td>
-    <td style="color:${a6c}">${l.ar60}</td>
     <td><span class="badge ${bc}"><span class="dot ${dc}"></span>${l.prio}</span></td>
   </tr>`;
 });
